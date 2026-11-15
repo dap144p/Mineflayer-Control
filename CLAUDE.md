@@ -1,3 +1,3 @@
-# See AGENTS.md
+See AGENTS.md.
 
-Follow the instructions in `AGENTS.md`.
+Follow the self-hosted Mineflayer Control project notes in AGENTS.md.
