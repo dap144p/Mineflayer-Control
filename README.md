@@ -1,40 +1,60 @@
-# Base44 App — TanStack Start
+# Mineflayer Control
 
-A full-stack Base44 app: [TanStack Start](https://tanstack.com/start) (React 19, plain JavaScript) with file-based routes, server functions and server routes, server-rendered and hosted by Base44.
+Mineflayer Control is a self-hosted Mineflayer web panel. The web app, Mineflayer bots, authentication, and persistent data all run inside your own Node.js server on Pterodactyl. It does not require Base44, a Base44 API key, or an external runner.
 
-## What is in the starter
+## Requirements
 
-| Route | File |
-| --- | --- |
-| `/` | `src/routes/index.jsx` — a server-rendered page whose loader calls a server function |
-| `GET /api/time` | `src/routes/api/time.js` — a server route: a raw HTTP endpoint next to the pages |
+- Pterodactyl server with Node.js 22 or newer
+- At least one allocated server port
+- Outbound network access to the Minecraft servers the bots connect to
 
-## Run locally
+## Deploy on Pterodactyl
 
-```bash
-npm ci
-base44 login   # one-time per machine
-base44 link    # one-time per clone
-base44 dev     # local backend + app together
-```
+1. Create a Node.js server in your Pterodactyl panel and allocate a port.
+2. Download this repository into the server files (or use the panel's Git deployment feature).
+3. Use Node.js 22 or newer.
+4. Set the startup command to:
 
-## Build and publish
+   \`npm install && npm run build && npm start\`
 
-```bash
-npm run build         # -> dist/client (assets) + dist/server (the Worker)
-base44 deploy         # or publish from the Base44 builder
-```
+   For later restarts, use \`npm start\` after the dependencies and build are already present.
+5. Open the allocated port through your panel's domain/proxy.
 
-There is no `index.html`: the HTML document is rendered on the server from `src/routes/__root.jsx`. The build runs through the [Cloudflare Vite plugin](https://developers.cloudflare.com/workers/vite-plugin/), so dev and build both execute server code in `workerd`.
+The app reads \`SERVER_PORT\` automatically when \`PORT\` is not set and binds to \`0.0.0.0\`.
 
-## How the pieces fit
+## First login
 
-- **Pages** are files in `src/routes/`. A route's `loader` runs on the server for a document request and in the browser for a client navigation; `Route.useLoaderData()` gives the component the resolved data.
-- **Server functions** (`src/lib/server-fns.js`) are RPCs created with `createServerFn`. `src/start.js` runs every one of them through `authMiddleware`, which sends the visitor's token along, so `context.getBase44()` returns a client acting as that visitor and entity access rules apply. `context.getBase44().asServiceRole` bypasses them, so use it only after authenticating the caller (`.middleware([requireUser])`) and checking they may access the records involved: server functions and server routes are public endpoints anyone can call with any input. See **Server Security** in `AGENTS.md`. Call it only in handlers that need Base44: it reads the platform headers, and a handler that never calls it works without them.
-- **Secrets** are read in server code with `import { secrets } from "base44:runtime"` → `secrets.get("NAME")`, inside a handler. Never `process.env`.
-- **Server routes** (`src/routes/api/*.js`) are raw HTTP endpoints for URLs something other than the app's own code requests (webhooks, downloads, feeds); the app's pages call server functions. `src/start.js` runs every request through `base44RequestMiddleware`, so their `server.handlers` receive the same `context.getBase44()` (`({ request, params, context }) => …`).
-- **Server-only code** lives in `*.server.js` files (TanStack refuses to bundle them for the browser).
-- **Auth** is resolved client-side after hydration (`useAuth()`); the server is anonymous on a document request, so give per-user pages `ssr: false`.
-- **Sign-in and gated pages** are not wired in the starter: `src/components/auth/` holds the pages (login, register, password reset, MCP consent) and a login gate for `src/routes/_authed/`, to add when the app needs them. See **Adding Authentication** in `AGENTS.md`.
-- **AI**: TanStack AI is installed and runs on the Base44 AI gateway, with no API key and usage billed to the app's AI credits. `gatewayModel(context.getBase44())` in `src/lib/ai.server.js` builds the adapter; `AGENTS.md` has a streaming chat example (a server route plus `useChat`).
-- **Caching**: the platform caches only what a route opts into via `headers()` (`Cache-Control: public, s-maxage=…`). Everything else is served fresh.
+Open the website. On the first visit, select **Buat akun owner pertama** and create the owner account. Registration closes automatically after the first account is created.
+
+Use a long, unique password. Sessions are stored locally and the login cookie is HttpOnly.
+
+## Local storage
+
+All persistent data is created under \`data/\` in the server's working directory:
+
+- \`users.json\` — local owner account and password hash
+- \`sessions.json\` — active login sessions
+- \`bots.json\` — bot configuration and status
+- \`commands.json\` — command history
+- \`logs.json\` — bot console logs
+- \`microsoft/\` — Microsoft authentication profile cache, when used
+
+Set \`DATA_DIR\` to another persistent directory when needed. Back up this folder before reinstalling or deleting the Pterodactyl server. Do not commit it to GitHub.
+
+## Environment variables
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| \`SERVER_PORT\` | Pterodactyl allocation | Pterodactyl's allocated port |
+| \`PORT\` | \`SERVER_PORT\` or \`3000\` | HTTP listening port |
+| \`HOST\` | \`0.0.0.0\` | Bind address |
+| \`DATA_DIR\` | \`./data\` | Persistent local data folder |
+| \`MAX_BOTS\` | \`10\` | Maximum simultaneous Mineflayer sessions |
+| \`COOKIE_SECURE\` | \`false\` | Set \`true\` when the public panel uses HTTPS |
+
+## Notes
+
+- Bots run in the same Node.js process as the panel. Keep the Pterodactyl server online to keep them connected.
+- Bots configured as running are resumed after the panel process restarts.
+- Microsoft sign-in tokens are stored in \`data/microsoft/\`.
+- The panel does not control or start another Pterodactyl server. It uses the resources assigned to this one.

@@ -13,32 +13,22 @@ export default function Layout({ children }) {
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-black transition-transform duration-300 group-hover:scale-105">
               <Terminal className="h-4 w-4" strokeWidth={2.4} />
             </span>
-            <span className="font-mono text-sm tracking-tight text-white/90">minepanel</span>
+            <span className="font-mono text-sm tracking-tight text-white/90">Mineflayer Control</span>
           </Link>
-
           <div className="flex items-center gap-4">
             <span className="hidden max-w-[180px] truncate font-mono text-[11px] text-white/30 sm:block">
-              {user?.email}
+              {user?.username || user?.email}
             </span>
-            <button
-              type="button"
-              onClick={() => logout()}
-              title="Keluar"
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-white/40 transition-colors hover:bg-white/[0.06] hover:text-white/80"
-            >
+            <button type="button" onClick={() => logout()} title="Keluar" className="flex h-8 w-8 items-center justify-center rounded-lg text-white/40 transition-colors hover:bg-white/[0.06] hover:text-white/80">
               <LogOut className="h-4 w-4" strokeWidth={1.8} />
             </button>
           </div>
         </div>
       </header>
-
       <main className="flex-1">{children}</main>
-
       <footer className="mx-auto w-full max-w-6xl px-5 py-8 sm:px-8">
         <div className="flex items-center justify-between border-t border-white/[0.06] pt-5">
-          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/20">
-            mineflayer control
-          </span>
+          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/20">mineflayer control</span>
           <span className="font-mono text-[10px] text-white/20">v1.0</span>
         </div>
       </footer>

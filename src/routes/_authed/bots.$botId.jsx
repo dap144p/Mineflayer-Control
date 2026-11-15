@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Loader2, Pencil, Power, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
+import { startBot, stopBot } from "@/lib/bot-fns";
 import StatusPill from "@/components/StatusPill";
 import BotConsole from "@/components/bot/BotConsole";
 import BotControls from "@/components/bot/BotControls";
@@ -25,7 +26,7 @@ function BotPanelPage() {
   const { data: bot, isLoading, isError } = useQuery({
     queryKey: ["bot", botId],
     queryFn: () => base44.entities.Bot.get(botId),
-    refetchInterval: 5000,
+    refetchInterval: 2500,
   });
 
   const { data: initialLogs } = useQuery({
@@ -37,6 +38,7 @@ function BotPanelPage() {
       );
       return (page.items ?? page).slice().reverse();
     },
+    refetchInterval: 3000,
   });
 
   useEffect(() => {
@@ -52,14 +54,15 @@ function BotPanelPage() {
   }, [botId]);
 
   const setRunning = async (running) => {
-    await base44.entities.Bot.update(botId, {
-      desired_state: running ? "running" : "stopped",
-      status: running ? "connecting" : "offline",
-      status_message: running ? "Menunggu runner..." : "Dihentikan oleh kamu.",
-    });
-    queryClient.invalidateQueries({ queryKey: ["bot", botId] });
-    queryClient.invalidateQueries({ queryKey: ["bots"] });
-    if (running && !runnerOnline) toast("Runner belum terhubung — jalankan runner dulu.");
+    try {
+      if (running) await startBot({ data: { botId } });
+      else await stopBot({ data: { botId } });
+      await queryClient.invalidateQueries({ queryKey: ["bot", botId] });
+      await queryClient.invalidateQueries({ queryKey: ["bots"] });
+      await queryClient.invalidateQueries({ queryKey: ["runners"] });
+    } catch (error) {
+      toast(error?.message || "Gagal mengubah status bot.");
+    }
   };
 
   const send = async (type, payload) => {
@@ -85,8 +88,6 @@ function BotPanelPage() {
 
   const removeBot = async () => {
     if (!window.confirm("Hapus bot ini beserta riwayat log-nya?")) return;
-    await base44.entities.BotLog.deleteMany({ bot_id: botId });
-    await base44.entities.BotCommand.deleteMany({ bot_id: botId });
     await base44.entities.Bot.delete(botId);
     await queryClient.invalidateQueries({ queryKey: ["bots"] });
     navigate({ to: "/" });
@@ -116,12 +117,8 @@ function BotPanelPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl px-5 pb-16 pt-8 sm:px-8 sm:pt-10">
-      <Link
-        to="/"
-        className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-white/30 transition-colors hover:text-white/70"
-      >
-        <ArrowLeft className="h-3.5 w-3.5" />
-        semua bot
+      <Link to="/" className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-white/30 transition-colors hover:text-white/70">
+        <ArrowLeft className="h-3.5 w-3.5" /> semua bot
       </Link>
 
       <div className="mt-6 flex flex-col gap-5 rounded-2xl border border-white/[0.07] bg-white/[0.015] p-5 sm:flex-row sm:items-center sm:justify-between">
@@ -145,29 +142,17 @@ function BotPanelPage() {
           <button
             type="button"
             onClick={() => setRunning(!isRunning)}
-            className={`flex h-10 items-center gap-2 rounded-xl px-4 text-[13px] font-medium transition-colors ${
-              isRunning
-                ? "border border-white/[0.09] bg-white/[0.03] text-white/70 hover:bg-white/[0.07] hover:text-white"
-                : "bg-white text-black hover:bg-white/90"
-            }`}
+            className={\`flex h-10 items-center gap-2 rounded-xl px-4 text-[13px] font-medium transition-colors \${isRunning
+              ? "border border-white/[0.09] bg-white/[0.03] text-white/70 hover:bg-white/[0.07] hover:text-white"
+              : "bg-white text-black hover:bg-white/90"}\`}
           >
             <Power className="h-4 w-4" strokeWidth={2.2} />
             {isRunning ? "Hentikan" : "Jalankan"}
           </button>
-          <button
-            type="button"
-            onClick={() => setFormOpen(true)}
-            title="Pengaturan"
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.09] bg-white/[0.03] text-white/50 transition-colors hover:bg-white/[0.07] hover:text-white"
-          >
+          <button type="button" onClick={() => setFormOpen(true)} title="Pengaturan" className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.09] bg-white/[0.03] text-white/50 transition-colors hover:bg-white/[0.07] hover:text-white">
             <Pencil className="h-4 w-4" strokeWidth={1.8} />
           </button>
-          <button
-            type="button"
-            onClick={removeBot}
-            title="Hapus bot"
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.09] bg-white/[0.03] text-white/40 transition-colors hover:border-red-400/30 hover:bg-red-400/10 hover:text-red-300"
-          >
+          <button type="button" onClick={removeBot} title="Hapus bot" className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.09] bg-white/[0.03] text-white/40 transition-colors hover:border-red-400/30 hover:bg-red-400/10 hover:text-red-300">
             <Trash2 className="h-4 w-4" strokeWidth={1.8} />
           </button>
         </div>
@@ -181,7 +166,7 @@ function BotPanelPage() {
           <BotControls bot={bot} onSend={send} />
           {!runnerOnline && (
             <p className="mt-3 rounded-xl border border-white/[0.07] bg-white/[0.02] px-3 py-2.5 text-[11.5px] leading-relaxed text-white/35">
-              Runner offline — perintah akan dikirim begitu runner menyala.
+              Engine lokal sedang tidak terhubung.
             </p>
           )}
         </div>
