@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/localClient";
 
 const EMPTY = { name: "", host: "", port: "25565", username: "", version: "", auth: "offline" };
 
@@ -64,10 +64,10 @@ export default function BotFormDialog({ open, onOpenChange, bot }) {
       };
 
       if (bot) {
-        await base44.entities.Bot.update(bot.id, payload);
+        await localClient.entities.Bot.update(bot.id, payload);
         queryClient.invalidateQueries({ queryKey: ["bot", bot.id] });
       } else {
-        await base44.entities.Bot.create({
+        await localClient.entities.Bot.create({
           ...payload,
           desired_state: "stopped",
           status: "offline",

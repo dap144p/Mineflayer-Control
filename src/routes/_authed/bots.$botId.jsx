@@ -3,7 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Loader2, Pencil, Power, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/localClient";
 import { startBot, stopBot } from "@/lib/bot-fns";
 import StatusPill from "@/components/StatusPill";
 import BotConsole from "@/components/bot/BotConsole";
@@ -25,14 +25,14 @@ function BotPanelPage() {
 
   const { data: bot, isLoading, isError } = useQuery({
     queryKey: ["bot", botId],
-    queryFn: () => base44.entities.Bot.get(botId),
+    queryFn: () => localClient.entities.Bot.get(botId),
     refetchInterval: 2500,
   });
 
   const { data: initialLogs } = useQuery({
     queryKey: ["bot-logs", botId],
     queryFn: async () => {
-      const page = await base44.entities.BotLog.filter(
+      const page = await localClient.entities.BotLog.filter(
         { bot_id: botId },
         { sort: "-created_date", limit: 120 }
       );
@@ -46,7 +46,7 @@ function BotPanelPage() {
   }, [initialLogs]);
 
   useEffect(() => {
-    const unsubscribe = base44.entities.BotLog.subscribe((event) => {
+    const unsubscribe = localClient.entities.BotLog.subscribe((event) => {
       if (event.type !== "create" || event.data?.bot_id !== botId) return;
       setLogs((prev) => [...prev, event.data].slice(-250));
     });
@@ -68,7 +68,7 @@ function BotPanelPage() {
   const send = async (type, payload) => {
     if (!bot) return;
     try {
-      await base44.entities.BotCommand.create({
+      await localClient.entities.BotCommand.create({
         bot_id: bot.id,
         bot_name: bot.name,
         type,
@@ -82,13 +82,13 @@ function BotPanelPage() {
 
   const clearLogs = async () => {
     setLogs([]);
-    await base44.entities.BotLog.deleteMany({ bot_id: botId });
+    await localClient.entities.BotLog.deleteMany({ bot_id: botId });
     queryClient.invalidateQueries({ queryKey: ["bot-logs", botId] });
   };
 
   const removeBot = async () => {
     if (!window.confirm("Hapus bot ini beserta riwayat log-nya?")) return;
-    await base44.entities.Bot.delete(botId);
+    await localClient.entities.Bot.delete(botId);
     await queryClient.invalidateQueries({ queryKey: ["bots"] });
     navigate({ to: "/" });
   };

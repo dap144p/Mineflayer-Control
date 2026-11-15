@@ -4,7 +4,7 @@ import { AuthLayout } from "@/components/auth/AuthLayout";
 import { AuthError, AuthLink, SubmitButton } from "@/components/auth/parts";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/localClient";
 
 export function RegisterPage() {
   const [username, setUsername] = useState("");
@@ -23,7 +23,7 @@ export function RegisterPage() {
     }
     setBusy(true);
     try {
-      await base44.auth.register({ username, email, password });
+      await localClient.auth.register({ username, email, password });
       window.location.href = "/";
     } catch (err) {
       setError(err.message || "Gagal membuat akun.");

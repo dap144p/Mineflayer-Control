@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, Radio, TerminalSquare } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/localClient";
 import BotCard from "@/components/dashboard/BotCard";
 import BotFormDialog from "@/components/dashboard/BotFormDialog";
 import { startBot, stopBot } from "@/lib/bot-fns";
@@ -20,13 +20,13 @@ function DashboardPage() {
 
   const { data: bots = [], isLoading } = useQuery({
     queryKey: ["bots"],
-    queryFn: () => base44.entities.Bot.list({ sort: "-created_date", limit: 60 }),
+    queryFn: () => localClient.entities.Bot.list({ sort: "-created_date", limit: 60 }),
     refetchInterval: 5000,
   });
 
   const { data: runners = [] } = useQuery({
     queryKey: ["runners"],
-    queryFn: () => base44.entities.Runner.list({ limit: 1 }),
+    queryFn: () => localClient.entities.Runner.list({ limit: 1 }),
     refetchInterval: 8000,
   });
 

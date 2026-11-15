@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/localClient";
 
 export default function useRunnerStatus() {
   const { data: runner, isLoading } = useQuery({
     queryKey: ["runner-record"],
     queryFn: async () => {
-      const page = await base44.entities.Runner.list({ sort: "-created_date", limit: 1 });
+      const page = await localClient.entities.Runner.list({ sort: "-created_date", limit: 1 });
       const items = page.items ?? page;
       return items[0] ?? null;
     },

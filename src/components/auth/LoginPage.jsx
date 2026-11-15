@@ -4,7 +4,7 @@ import { AuthLayout } from "@/components/auth/AuthLayout";
 import { AuthError, AuthLink, SubmitButton } from "@/components/auth/parts";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/localClient";
 
 export function LoginPage() {
   const [username, setUsername] = useState("");
@@ -14,7 +14,7 @@ export function LoginPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    base44.auth.setup().then((result) => setSetupRequired(Boolean(result.setupRequired))).catch(() => {});
+    localClient.auth.setup().then((result) => setSetupRequired(Boolean(result.setupRequired))).catch(() => {});
   }, []);
 
   async function submit(event) {
@@ -22,7 +22,7 @@ export function LoginPage() {
     setError("");
     setBusy(true);
     try {
-      await base44.auth.login({ username, password });
+      await localClient.auth.login({ username, password });
       window.location.href = "/";
     } catch (err) {
       setError(err.message || "Gagal login.");
