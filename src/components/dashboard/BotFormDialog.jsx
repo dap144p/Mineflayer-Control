@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { base44 } from "@/api/localClient";
+import { localClient } from "@/api/localClient";
 
 const EMPTY = { name: "", host: "", port: "25565", username: "", version: "", auth: "offline" };
 

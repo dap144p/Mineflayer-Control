@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Activity, Cpu, HardDrive, Server } from "lucide-react";
-import { base44 } from "@/api/localClient";
+import { localClient } from "@/api/localClient";
 
 export const Route = createFileRoute("/_authed/runners")({
   component: RunnersPage,

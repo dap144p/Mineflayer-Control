@@ -3,7 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Loader2, Pencil, Power, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { base44 } from "@/api/localClient";
+import { localClient } from "@/api/localClient";
 import { startBot, stopBot } from "@/lib/bot-fns";
 import StatusPill from "@/components/StatusPill";
 import BotConsole from "@/components/bot/BotConsole";

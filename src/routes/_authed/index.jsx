@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, Radio, TerminalSquare } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { base44 } from "@/api/localClient";
+import { localClient } from "@/api/localClient";
 import BotCard from "@/components/dashboard/BotCard";
 import BotFormDialog from "@/components/dashboard/BotFormDialog";
 import { startBot, stopBot } from "@/lib/bot-fns";

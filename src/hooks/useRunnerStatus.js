@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/localClient";
+import { localClient } from "@/api/localClient";
 
 export default function useRunnerStatus() {
   const { data: runner, isLoading } = useQuery({
