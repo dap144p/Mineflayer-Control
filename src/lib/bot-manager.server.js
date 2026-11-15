@@ -16,16 +16,21 @@ const MAX_BOTS = Math.max(1, Math.min(100, Number(process.env.MAX_BOTS) || 10));
 const DATA_DIR = path.resolve(process.env.DATA_DIR || "./data");
 
 async function log(botId, level, message) {
+  const config = await getRow("Bot", botId);
+  if (!config) return;
+
   await createRow("BotLog", {
     bot_id: botId,
+    created_by_id: config.created_by_id,
     level,
     message: String(message || "").slice(0, 1000),
   });
-  const logs = await listRows("BotLog", {}, { sort: "-created_date", limit: 6000 });
-  if (logs.length >= 6000) {
-    const keep = new Set(logs.slice(0, 5000).map((entry) => entry.id));
-    await mutateBucket("BotLog", (rows) => rows.splice(0, rows.length, ...rows.filter((entry) => keep.has(entry.id))));
-  }
+  await mutateBucket("BotLog", (rows) => {
+    if (rows.length > 5000) {
+      rows.sort((a, b) => String(a.created_date).localeCompare(String(b.created_date)));
+      rows.splice(0, rows.length - 5000);
+    }
+  });
 }
 
 async function setStatus(id, status, message) {
@@ -43,8 +48,7 @@ export async function startBot(id, ownerId) {
   if (!config || config.created_by_id !== ownerId) throw new Error("Bot tidak ditemukan.");
   if (bots.has(id)) return { ok: true, status: "running" };
 
-  const activeCount = bots.size;
-  if (activeCount >= MAX_BOTS) throw new Error("Batas bot aktif tercapai (" + MAX_BOTS + ").");
+  if (bots.size >= MAX_BOTS) throw new Error("Batas bot aktif tercapai (" + MAX_BOTS + ").");
 
   await updateRow("Bot", id, {
     desired_state: "running",

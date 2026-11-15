@@ -1,12 +1,12 @@
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, useContext, useMemo } from "react";
-import { base44 } from "@/api/base44Client";
+import { localClient } from "@/api/localClient";
 
 export const authQuery = queryOptions({
   queryKey: ["auth", "me"],
   queryFn: async () => {
     try {
-      return { user: await base44.auth.me(), error: null };
+      return { user: await localClient.auth.me(), error: null };
     } catch (error) {
       if (error?.status === 401 || error?.status === 403) return { user: null, error: null };
       throw error;
@@ -20,7 +20,10 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const queryClient = useQueryClient();
-  const { data, error, isPending } = useQuery(authQuery);
+  const { data, error, isPending } = useQuery({
+    ...authQuery,
+    enabled: typeof window !== "undefined",
+  });
 
   const value = useMemo(() => ({
     user: data?.user ?? null,
@@ -29,7 +32,7 @@ export function AuthProvider({ children }) {
     authError: error ? { type: "unknown", message: error.message || "Gagal memuat sesi." } : null,
     refresh: () => queryClient.fetchQuery({ ...authQuery, staleTime: 0 }),
     logout: async () => {
-      await base44.auth.logout();
+      await localClient.auth.logout();
       queryClient.setQueryData(authQuery.queryKey, { user: null, error: null });
       window.location.href = "/login";
     },

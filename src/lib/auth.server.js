@@ -1,6 +1,6 @@
 import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual, randomUUID } from "node:crypto";
 import { promisify } from "node:util";
-import { createRow, deleteRows, getRow, listRows } from "@/lib/local-store.server";
+import { createRow, deleteRows, getRow, listRows, mutateBucket } from "@/lib/local-store.server";
 
 const scrypt = promisify(scryptCallback);
 const SESSION_TTL = 7 * 24 * 60 * 60 * 1000;
@@ -29,12 +29,17 @@ export function getCookieToken(request) {
   const cookie = request.headers.get("cookie") || "";
   for (const part of cookie.split(";")) {
     const [name, ...value] = part.trim().split("=");
-    if (name === COOKIE_NAME) return decodeURIComponent(value.join("="));
+    if (name !== COOKIE_NAME) continue;
+    try {
+      return decodeURIComponent(value.join("="));
+    } catch {
+      return "";
+    }
   }
   return "";
 }
 
-export function sessionCookie(token, request, clear = false) {
+export function sessionCookie(token, _request, clear = false) {
   const secure = process.env.COOKIE_SECURE === "true" ? "; Secure" : "";
   const value = clear ? "" : encodeURIComponent(token);
   const age = clear ? 0 : Math.floor(SESSION_TTL / 1000);
@@ -64,16 +69,27 @@ export async function registerFirstUser({ username, email, password }) {
   if (typeof password !== "string" || password.length < 10 || password.length > 128) {
     throw new Error("Password harus 10–128 karakter.");
   }
-  if (!(await setupRequired())) throw new Error("Akun pertama sudah dibuat. Registrasi baru ditutup.");
 
   const passwordHash = await hashPassword(password);
-  if (!(await setupRequired())) throw new Error("Akun pertama sudah dibuat. Registrasi baru ditutup.");
-  const user = await createRow("User", {
-    username: cleanUsername,
-    email: cleanEmail,
-    password_hash: passwordHash,
-    role: "owner",
+  const user = await mutateBucket("User", (rows) => {
+    if (rows.length > 0) throw new Error("Akun pertama sudah dibuat. Registrasi baru ditutup.");
+    if (rows.some((row) => row.username?.toLowerCase() === cleanUsername.toLowerCase() || row.email?.toLowerCase() === cleanEmail)) {
+      throw new Error("Username atau email sudah digunakan.");
+    }
+    const now = new Date().toISOString();
+    const created = {
+      id: randomUUID(),
+      username: cleanUsername,
+      email: cleanEmail,
+      password_hash: passwordHash,
+      role: "owner",
+      created_date: now,
+      updated_date: now,
+    };
+    rows.push(created);
+    return created;
   });
+
   const token = randomBytes(32).toString("hex");
   await createRow("Session", {
     user_id: user.id,
@@ -85,7 +101,7 @@ export async function registerFirstUser({ username, email, password }) {
 
 export async function loginUser({ username, email, password }) {
   const identifier = String(username || email || "").trim().toLowerCase();
-  const users = await listRows("User", {}, { limit: 2 });
+  const users = await listRows("User", {}, { limit: 10 });
   const user = users.find((entry) =>
     entry.username.toLowerCase() === identifier || entry.email.toLowerCase() === identifier
   );
