@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Activity, Cpu, HardDrive, Server } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/localClient";
 
 export const Route = createFileRoute("/_authed/runners")({
   component: RunnersPage,
@@ -10,7 +10,7 @@ export const Route = createFileRoute("/_authed/runners")({
 function RunnersPage() {
   const { data: runtime, isLoading, error } = useQuery({
     queryKey: ["runtime"],
-    queryFn: () => base44.runtime.get(),
+    queryFn: () => localClient.runtime.get(),
     refetchInterval: 5000,
   });
 

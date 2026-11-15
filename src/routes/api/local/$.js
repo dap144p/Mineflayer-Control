@@ -32,6 +32,30 @@ const ENTITY_BUCKETS = {
   BotLog: "BotLog",
 };
 
+const authRateLimits = new Map();
+
+function allowAuthAttempt(request, action, limit, windowMs) {
+  const forwarded = request.headers.get("x-real-ip") ||
+    request.headers.get("cf-connecting-ip") ||
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    "unknown";
+  const key = action + ":" + forwarded;
+  const now = Date.now();
+  let entry = authRateLimits.get(key);
+  if (!entry || entry.resetAt <= now) {
+    entry = { count: 0, resetAt: now + windowMs };
+    authRateLimits.set(key, entry);
+  }
+  if (entry.count >= limit) return false;
+  entry.count += 1;
+  if (authRateLimits.size > 2048) {
+    for (const [storedKey, value] of authRateLimits) {
+      if (value.resetAt <= now) authRateLimits.delete(storedKey);
+    }
+  }
+  return true;
+}
+
 function json(data, status = 200, headers = {}) {
   return Response.json(data, { status, headers });
 }
@@ -58,11 +82,17 @@ async function handle(request, params) {
   }
 
   if (area === "auth" && first === "register" && method === "POST") {
+    if (!allowAuthAttempt(request, "register", 3, 10 * 60 * 1000)) {
+      return json({ error: "Terlalu banyak percobaan. Coba lagi beberapa menit." }, 429);
+    }
     const result = await registerFirstUser(await bodyOf(request));
     return json({ user: result.user }, 201, { "Set-Cookie": sessionCookie(result.token, request) });
   }
 
   if (area === "auth" && first === "login" && method === "POST") {
+    if (!allowAuthAttempt(request, "login", 10, 5 * 60 * 1000)) {
+      return json({ error: "Terlalu banyak percobaan login. Coba lagi dalam 5 menit." }, 429);
+    }
     const result = await loginUser(await bodyOf(request));
     return json({ user: result.user }, 200, { "Set-Cookie": sessionCookie(result.token, request) });
   }
@@ -139,7 +169,10 @@ async function handle(request, params) {
     const rows = Array.isArray(input.rows) ? input.rows.slice(0, 100) : [];
     const own = await listRows(bucket, { created_by_id: user.id }, { limit: 500 });
     const allowed = new Set(own.map((row) => row.id));
-    return json(await updateRows(bucket, rows.filter((row) => allowed.has(row.id))));
+    const safeRows = rows
+      .filter((row) => allowed.has(row.id))
+      .map(({ id, created_by_id, created_date, ...patch }) => ({ id, ...patch, created_by_id: user.id }));
+    return json(await updateRows(bucket, safeRows));
   }
 
   if (method === "POST" && !second) {
@@ -191,7 +224,23 @@ async function handle(request, params) {
     const row = await getRow(bucket, second);
     if (!row || row.created_by_id !== user.id) return json({ error: "Not found" }, 404);
     const input = await bodyOf(request);
-    const { id, created_by_id, created_date, ...safePatch } = input;
+    const safePatch = {};
+    if (entity === "Bot") {
+      for (const key of ["name", "host", "port", "username", "version", "auth"]) {
+        if (Object.hasOwn(input, key)) safePatch[key] = input[key];
+      }
+      if (safePatch.name !== undefined) safePatch.name = String(safePatch.name).trim().slice(0, 64);
+      if (safePatch.host !== undefined) safePatch.host = String(safePatch.host).trim().slice(0, 253);
+      if (safePatch.username !== undefined) safePatch.username = String(safePatch.username).trim().slice(0, 32);
+      if (safePatch.port !== undefined) {
+        const port = Number(safePatch.port);
+        if (!Number.isInteger(port) || port < 1 || port > 65535) return json({ error: "Port tidak valid." }, 400);
+        safePatch.port = port;
+      }
+      if (safePatch.auth !== undefined && !["offline", "microsoft"].includes(safePatch.auth)) {
+        return json({ error: "Jenis login tidak valid." }, 400);
+      }
+    }
     return json(await updateRow(bucket, second, safePatch));
   }
 
