@@ -142,9 +142,9 @@ function BotPanelPage() {
           <button
             type="button"
             onClick={() => setRunning(!isRunning)}
-            className={\`flex h-10 items-center gap-2 rounded-xl px-4 text-[13px] font-medium transition-colors \${isRunning
-              ? "border border-white/[0.09] bg-white/[0.03] text-white/70 hover:bg-white/[0.07] hover:text-white"
-              : "bg-white text-black hover:bg-white/90"}\`}
+            className={isRunning
+              ? "flex h-10 items-center gap-2 rounded-xl px-4 text-[13px] font-medium transition-colors border border-white/[0.09] bg-white/[0.03] text-white/70 hover:bg-white/[0.07] hover:text-white"
+              : "flex h-10 items-center gap-2 rounded-xl px-4 text-[13px] font-medium transition-colors bg-white text-black hover:bg-white/90"}
           >
             <Power className="h-4 w-4" strokeWidth={2.2} />
             {isRunning ? "Hentikan" : "Jalankan"}
