@@ -12,7 +12,7 @@ export default defineConfig({
   },
   plugins: [
     tanstackStart({ srcDirectory: "src", server: { entry: "./server.js" } }),
-    nitro({ preset: "node-server" }),
+    nitro({ preset: "node-server", traceDeps: ["minecraft-data"] }),
     react(),
   ],
 });
