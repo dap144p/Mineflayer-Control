@@ -1,7 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, Radio, TerminalSquare } from "lucide-react";
+import { Loader2, Plus, TerminalSquare } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { localClient } from "@/api/localClient";
@@ -24,15 +24,7 @@ function DashboardPage() {
     refetchInterval: 5000,
   });
 
-  const { data: runners = [] } = useQuery({
-    queryKey: ["runners"],
-    queryFn: () => localClient.entities.Runner.list({ limit: 1 }),
-    refetchInterval: 8000,
-  });
-
-  const runnerOnline = runners.length > 0 ? 1 : 0;
-  const online = bots.filter((bot) => bot.status === "online").length;
-  const queued = bots.filter((bot) => bot.status === "queued").length;
+  const account = bots[0] || null;
 
   const toggleBot = async (bot) => {
     const isRunning = bot.desired_state === "running";
@@ -50,10 +42,9 @@ function DashboardPage() {
   };
 
   const stats = [
-    { label: "bot", value: bots.length },
-    { label: "online", value: online },
-    { label: "antrian", value: queued },
-    { label: "runner lokal", value: runnerOnline ? "aktif" : "offline" },
+    { label: "akun", value: bots.length ? "1 / 1" : "0 / 1" },
+    { label: "status", value: account?.status || "belum diatur" },
+    { label: "server", value: account ? `${account.host}:${account.port}` : "—" },
   ];
 
   return (
@@ -68,20 +59,22 @@ function DashboardPage() {
           <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-white/25">dashboard</p>
           <h1 className="mt-3 text-[28px] font-medium leading-tight tracking-tight text-white sm:text-4xl">Bot kamu</h1>
           <p className="mt-2 max-w-sm text-[13px] leading-relaxed text-white/40">
-            Jalankan, pantau, dan kirim perintah ke bot Mineflayer langsung dari panel ini.
+            Hubungkan satu akun Minecraft ke satu server dan kendalikan dari panel ini.
           </p>
         </div>
-        <div className="flex gap-2">
-          <Link to="/runners" className="flex h-10 items-center gap-2 rounded-xl border border-white/[0.09] bg-white/[0.03] px-4 text-[13px] text-white/70 transition-colors hover:bg-white/[0.07] hover:text-white">
-            <Radio className="h-4 w-4" strokeWidth={1.8} /> Runtime
-          </Link>
-          <button type="button" onClick={() => setFormOpen(true)} className="flex h-10 items-center gap-2 rounded-xl bg-white px-4 text-[13px] font-medium text-black transition-colors hover:bg-white/90">
-            <Plus className="h-4 w-4" strokeWidth={2.2} /> Tambah bot
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setFormOpen(true)}
+          disabled={isLoading || bots.length >= 1}
+          title={bots.length >= 1 ? "Hanya satu akun Minecraft yang didukung." : "Tambah akun Minecraft"}
+          className="flex h-10 items-center gap-2 rounded-xl bg-white px-4 text-[13px] font-medium text-black transition-colors hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <Plus className="h-4 w-4" strokeWidth={2.2} />
+          {bots.length >= 1 ? "Akun terpasang" : "Tambah akun"}
+        </button>
       </motion.div>
 
-      <div className="mt-10 grid grid-cols-4 divide-x divide-white/[0.06] overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.015]">
+      <div className="mt-10 grid grid-cols-3 divide-x divide-white/[0.06] overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.015]">
         {stats.map((stat) => (
           <div key={stat.label} className="px-3 py-4 sm:px-5">
             <p className="font-mono text-[9.5px] uppercase tracking-[0.12em] text-white/25 sm:text-[10px]">{stat.label}</p>
@@ -90,22 +83,9 @@ function DashboardPage() {
         ))}
       </div>
 
-      <div className="mt-5 flex flex-col gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3">
-          <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
-          <div>
-            <p className="text-[13px] text-white/80">Engine lokal aktif</p>
-            <p className="mt-0.5 text-[12px] leading-relaxed text-white/35">Bot berjalan di container Pterodactyl ini. Data disimpan di folder data/.</p>
-          </div>
-        </div>
-        <Link to="/runners" className="flex h-9 shrink-0 items-center gap-2 self-start rounded-xl border border-white/[0.09] bg-white/[0.04] px-3.5 font-mono text-[11px] text-white/70 transition-colors hover:bg-white/[0.08] hover:text-white sm:self-auto">
-          <TerminalSquare className="h-3.5 w-3.5" strokeWidth={1.8} /> lihat runtime
-        </Link>
-      </div>
-
       <div className="mt-10 flex items-center justify-between">
-        <h2 className="font-mono text-[10px] uppercase tracking-[0.22em] text-white/25">daftar bot</h2>
-        <span className="font-mono text-[10px] text-white/20">{bots.length} total</span>
+        <h2 className="font-mono text-[10px] uppercase tracking-[0.22em] text-white/25">akun Minecraft</h2>
+        <span className="font-mono text-[10px] text-white/20">{bots.length ? "1 akun" : "belum ada akun"}</span>
       </div>
 
       {isLoading ? (

@@ -1,6 +1,8 @@
 # Mineflayer Control
 
-Mineflayer Control is a self-hosted Mineflayer web panel. The web app, Mineflayer bots, authentication, and persistent data all run inside your own Node.js server on Pterodactyl. It does not require Base44, a Base44 API key, or an external runner.
+Mineflayer Control is a self-hosted Mineflayer web panel for one Minecraft account and one destination server. The web app, Mineflayer process, authentication, and persistent data run inside your own Node.js server on Pterodactyl. It does not require Base44 or a Base44 API key.
+
+Each owner can save one bot configuration. Edit that configuration to change the account or server. This basic version has no World Viewer or 3D game rendering.
 
 ## Requirements
 

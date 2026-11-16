@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   createRow,
@@ -8,6 +9,7 @@ import {
   listRows,
   updateRow,
   updateRows,
+  mutateBucket,
 } from "@/lib/local-store.server";
 import {
   getUserForRequest,
@@ -76,6 +78,44 @@ function json(data, status = 200, headers = {}) {
 
 async function bodyOf(request) {
   try { return await request.json(); } catch { return {}; }
+}
+
+const SINGLE_BOT_ERROR = "Hanya 1 akun Minecraft yang bisa dikonfigurasi. Edit atau hapus konfigurasi yang ada sebelum menggantinya.";
+
+async function createBotConfig(userId, input = {}) {
+  const name = String(input.name || "").trim().slice(0, 64);
+  const host = String(input.host || "").trim().slice(0, 253);
+  const username = String(input.username || "").trim().slice(0, 32);
+  const port = Number(input.port || 25565);
+  const auth = String(input.auth || "offline");
+
+  if (!name || !host || !username) throw new Error("Nama, host, dan username wajib diisi.");
+  if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("Port tidak valid.");
+  if (!["offline", "microsoft"].includes(auth)) throw new Error("Jenis login tidak valid.");
+
+  return mutateBucket("Bot", (rows) => {
+    if (rows.some((row) => row.created_by_id === userId)) return null;
+    const now = new Date().toISOString();
+    const row = {
+      id: randomUUID(),
+      name,
+      host,
+      port,
+      username,
+      version: String(input.version || "").trim().slice(0, 32),
+      auth,
+      created_by_id: userId,
+      desired_state: "stopped",
+      status: "offline",
+      status_message: "Siap dijalankan.",
+      runner_id: null,
+      runner_name: "",
+      created_date: now,
+      updated_date: now,
+    };
+    rows.push(row);
+    return row;
+  });
 }
 
 function queryOptions(url) {
@@ -237,6 +277,11 @@ async function handle(request, params) {
   if (method === "POST" && second === "bulk-create") {
     const input = await bodyOf(request);
     const rows = Array.isArray(input.rows) ? input.rows.slice(0, 100) : [];
+    if (entity === "Bot") {
+      if (rows.length !== 1) return json({ error: "Bot hanya mendukung satu konfigurasi." }, 400);
+      const created = await createBotConfig(user.id, rows[0]);
+      return created ? json([created], 201) : json({ error: SINGLE_BOT_ERROR }, 409);
+    }
     return json(await createRows(bucket, rows.map((row) => ({ ...row, created_by_id: user.id }))), 201);
   }
 
@@ -254,25 +299,8 @@ async function handle(request, params) {
   if (method === "POST" && !second) {
     const input = await bodyOf(request);
     if (entity === "Bot") {
-      const required = ["name", "host", "username"];
-      if (required.some((key) => !String(input[key] || "").trim())) return json({ error: "Nama, host, dan username wajib diisi." }, 400);
-      const port = Number(input.port) || 25565;
-      if (!Number.isInteger(port) || port < 1 || port > 65535) return json({ error: "Port tidak valid." }, 400);
-      if ((await listRows("Bot", { created_by_id: user.id }, { limit: 500 })).length >= 100) return json({ error: "Maksimal 100 konfigurasi bot." }, 400);
-      const row = await createRow(bucket, {
-        ...input,
-        name: String(input.name).trim().slice(0, 64),
-        host: String(input.host).trim().slice(0, 253),
-        username: String(input.username).trim().slice(0, 32),
-        port,
-        created_by_id: user.id,
-        desired_state: "stopped",
-        status: "offline",
-        status_message: "Siap dijalankan.",
-        runner_id: null,
-        runner_name: "",
-      });
-      return json(row, 201);
+      const row = await createBotConfig(user.id, input);
+      return row ? json(row, 201) : json({ error: SINGLE_BOT_ERROR }, 409);
     }
     if (entity === "BotCommand") {
       const inputType = String(input.type || "");
