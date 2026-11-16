@@ -34,14 +34,14 @@ export default defineWebSocketHandler({
     const url = new URL(request.url);
     const origin = request.headers.get("origin");
     if (origin && new URL(origin).host !== url.host) {
-      return new Response("Forbidden", { status: 403 });
+      throw new Response("Forbidden", { status: 403 });
     }
 
     const user = await getUserForRequest(request);
-    if (!user) return new Response("Unauthorized", { status: 401 });
+    if (!user) throw new Response("Unauthorized", { status: 401 });
 
     const botId = decodeURIComponent(url.pathname.split("/").filter(Boolean).pop() || "");
-    if (!botId) return new Response("Bot ID required", { status: 400 });
+    if (!botId) throw new Response("Bot ID required", { status: 400 });
 
     return { context: { ownerId: user.id, botId } };
   },
