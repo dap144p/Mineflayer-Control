@@ -38,7 +38,7 @@ Mineflayer Control supports three runner modes:
 
 VPS and Pterodactyl runner processes connect back to `/api/runner/sync` using their generated runner token. Keep that token private. Panel API keys are stored in the local `data/runners.json` file and are not returned to the browser. The `data/` directory is excluded from Git.
 
-Bots are assigned to available external runners first, then to Local Runner. If all available runner slots are full, bots remain queued until a slot becomes available. Each external runner's `maks bot` setting controls its assigned bot capacity.
+Bots are assigned to available external runners first, then to Local Runner. If all available runner slots are full, bots remain queued until a slot becomes available. Each external runner's `max bot` setting controls its assigned bot capacity.
 
 ## First login
 

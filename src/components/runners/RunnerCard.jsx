@@ -66,10 +66,10 @@ export default function RunnerCard({ runner, used, busy, onEdit, onScript, onPow
           </div>
           <div>
             <p className="text-[9.5px] uppercase tracking-[0.14em] text-white/20">
-              {isLocal ? "node" : isPanel ? "ram terpakai" : "versi node"}
+              {isLocal ? "node · ram" : isPanel ? "ram terpakai" : "versi node"}
             </p>
             <p className="mt-0.5 truncate text-white/55">
-              {isLocal ? runner.version || "—" : isPanel ? (runner.memory_used_mb || 0) + " / " + (runner.memory_limit_mb || 0) + " MB" : runner.version || "—"}
+              {isLocal ? (runner.version || "—") + " · " + (runner.memory_used_mb || 0) + " MB" : isPanel ? (runner.memory_used_mb || 0) + " / " + (runner.memory_limit_mb || 0) + " MB" : runner.version || "—"}
             </p>
           </div>
         </div>
