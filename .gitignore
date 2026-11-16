@@ -8,6 +8,9 @@ data/
 *.log
 npm-debug.log*
 
+# generated viewer assets
+public/viewer/
+
 # dependencies and generated output
 node_modules/
 dist/

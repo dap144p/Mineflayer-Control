@@ -38,6 +38,19 @@ Use the bot detail page for web controls: chat, server commands, directional mov
 
 A successful login depends on the target server's version, authentication mode, network availability, and server access policy. The panel does not bypass server admission or anti-bot checks.
 
+
+## 3D Viewer
+
+Open an online bot's detail page and choose **Lihat Dunia** to open its live 3D view. The viewer renders nearby terrain and visible entities in the browser, with orbit and first-person camera modes.
+
+- Uses the same HTTP/WebSocket listener and allocated Pterodactyl port as the panel; no second port is required.
+- One active viewer is kept per account. Opening another bot replaces the previous bot's viewer stream.
+- The current viewer is available for bots running on **Local Runner**. External runners do not expose their live Mineflayer world to this process.
+- The viewer is a world monitor, not a full Minecraft Java client. It does not add the complete vanilla HUD, inventory, or all client-side effects.
+- The viewer assets are copied from Prismarine Viewer during the build. No manual asset upload is needed.
+
+The hosting proxy must allow WebSocket upgrades on the panel's existing domain and port.
+
 ## Runner modes
 
 Mineflayer Control supports three runner modes:

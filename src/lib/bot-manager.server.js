@@ -191,6 +191,15 @@ export async function stopBot(id, ownerId) {
   return { ok: true, status: "offline" };
 }
 
+export async function getLocalViewerBot(id, ownerId) {
+  const config = await getRow("Bot", id);
+  if (!config || config.created_by_id !== ownerId) throw new Error("Bot tidak ditemukan.");
+  if (config.runner_id !== "local") throw new Error("3D Viewer saat ini hanya mendukung Local Runner.");
+  const session = bots.get(id);
+  if (!session?.bot?.entity || session.stopping) throw new Error("Bot belum online di Local Runner.");
+  return session.bot;
+}
+
 export async function executeBotCommand(id, ownerId, type, payload = "") {
   const config = await getRow("Bot", id);
   const session = bots.get(id);

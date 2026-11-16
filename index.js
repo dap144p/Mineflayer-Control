@@ -75,7 +75,11 @@ function buildFingerprint() {
   };
 
   addDirectory(join(ROOT, "src"));
-  for (const name of ["package.json", "package-lock.json", "vite.config.js", "tailwind.config.js", "postcss.config.js", "components.json"]) {
+  for (const directory of ["server", "scripts", "viewer-client"]) {
+    const path = join(ROOT, directory);
+    if (existsSync(path)) addDirectory(path);
+  }
+  for (const name of ["package.json", "package-lock.json", "vite.config.js", "vite.viewer.config.js", "tailwind.config.js", "postcss.config.js", "components.json"]) {
     const path = join(ROOT, name);
     if (existsSync(path)) addFile(path);
   }
