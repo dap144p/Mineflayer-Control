@@ -16,6 +16,7 @@ export default defineConfig({
   resolve: {
     alias: [
       { find: "@viewer-three", replacement: viewerThreeRoot },
+      { find: /^three$/, replacement: viewerThreeRoot },
       { find: /^canvas$/, replacement: join(root, "viewer-client", "canvas.js") },
     ],
   },
