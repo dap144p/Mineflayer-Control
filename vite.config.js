@@ -12,7 +12,7 @@ export default defineConfig({
   },
   plugins: [
     tanstackStart({ srcDirectory: "src", server: { entry: "./server.js" } }),
-    nitro({ preset: "node-server", serverDir: "server", traceDeps: ["minecraft-data", "prismarine-viewer"] }),
+    nitro({ preset: "node-server", serverDir: "server", features: { websocket: true }, traceDeps: ["minecraft-data", "prismarine-viewer"] }),
     react(),
   ],
 });
