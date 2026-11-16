@@ -47,18 +47,19 @@ export default function BotFormDialog({ open, onOpenChange, bot }) {
 
   const submit = async (event) => {
     event.preventDefault();
-    if (!form.name.trim() || !form.host.trim() || !form.username.trim()) {
-      toast("Nama, host, dan username wajib diisi.");
+    const username = form.username.trim();
+    if (!form.host.trim() || !username) {
+      toast("Host dan username wajib diisi.");
       return;
     }
 
     setSaving(true);
     try {
       const payload = {
-        name: form.name.trim(),
+        name: form.name.trim() || username,
         host: form.host.trim(),
         port: Number(form.port) || 25565,
-        username: form.username.trim(),
+        username,
         version: form.version.trim(),
         auth: form.auth,
       };
@@ -93,19 +94,19 @@ export default function BotFormDialog({ open, onOpenChange, bot }) {
             {bot ? "Pengaturan bot" : "Tambah bot"}
           </DialogTitle>
           <DialogDescription className="text-[12px] text-white/40">
-            Isi data server Minecraft yang mau dimasuki bot.
+            Isi akun dan server Minecraft yang mau dimasuki bot.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={submit} className="space-y-4">
           <div className="space-y-1.5">
             <Label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">
-              nama bot
+              nama bot (opsional)
             </Label>
             <Input
               value={form.name}
               onChange={(event) => set("name", event.target.value)}
-              placeholder="Aurora"
+              placeholder="Kosongkan untuk memakai username"
               className="border-white/[0.09] bg-white/[0.03]"
             />
           </div>
@@ -113,7 +114,7 @@ export default function BotFormDialog({ open, onOpenChange, bot }) {
           <div className="grid grid-cols-[1fr_100px] gap-3">
             <div className="space-y-1.5">
               <Label className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">
-                host
+                server IP / host
               </Label>
               <Input
                 value={form.host}
@@ -169,7 +170,7 @@ export default function BotFormDialog({ open, onOpenChange, bot }) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="border-white/[0.08] bg-[#0b0b0e]">
-                <SelectItem value="offline">offline (cracked)</SelectItem>
+                <SelectItem value="offline">offline</SelectItem>
                 <SelectItem value="microsoft">microsoft</SelectItem>
               </SelectContent>
             </Select>

@@ -15,15 +15,28 @@ Mineflayer Control is a self-hosted Mineflayer web panel. The web app, Mineflaye
 3. Select Node.js 22 or newer in the server's startup environment.
 4. Set the Pterodactyl startup command to:
 
-   node index.js
+   `node index.js`
 
 5. Save the setting and start the server. The entrypoint automatically installs or updates dependencies when needed, builds the web panel when source files change, then starts the website. The first startup may take longer while dependencies are installed and the initial build runs.
-
 6. Open the allocated port through your panel's domain/proxy.
 
-Keep the startup command as node index.js for every restart. After pulling source-code updates, start the server again; the entrypoint checks the source and rebuilds when needed.
+Keep the startup command as `node index.js` for every restart. After pulling source-code updates, start the server again; the entrypoint checks the source and rebuilds when needed.
 
-The entrypoint maps Pterodactyl's SERVER_PORT to PORT and binds the server to 0.0.0.0.
+The entrypoint maps Pterodactyl's `SERVER_PORT` to `PORT` and binds the server to `0.0.0.0`.
+
+## Add and start a bot
+
+1. Open **Tambah bot** from the dashboard.
+2. Enter the Minecraft server address, port, username, and game version. Leave the version blank or use `auto` for automatic protocol selection.
+3. The display name is optional. When blank, the username is used as the bot name.
+4. Choose the authentication mode supported by the target server: **offline** or **Microsoft**.
+5. Press **Simpan**. The bot is saved with its state set to stopped.
+6. Press the bot's **Jalankan / Power** button. Mineflayer Control assigns an available runner and starts the connection.
+7. Watch the bot status and console. The status becomes **online** after the bot has spawned into the Minecraft world.
+
+Use the bot detail page for web controls: chat, server commands, directional movement, jump, and stop. Movement buttons currently send a short movement input; the stop button clears active controls.
+
+A successful login depends on the target server's version, authentication mode, network availability, and server access policy. The panel does not bypass server admission or anti-bot checks.
 
 ## Runner modes
 
@@ -45,16 +58,16 @@ Use a long, unique password. Sessions are stored locally and the login cookie is
 
 ## Local storage
 
-All persistent data is created under data/ in the server's working directory:
+All persistent data is created under `data/` in the server's working directory:
 
-- users.json — local owner account and password hash
-- sessions.json — active login sessions
-- bots.json — bot configuration and status
-- commands.json — command history
-- logs.json — bot console logs
-- microsoft/ — Microsoft authentication profile cache, when used
+- `users.json` — local owner account and password hash
+- `sessions.json` — active login sessions
+- `bots.json` — bot configuration and status
+- `commands.json` — command history
+- `logs.json` — bot console logs
+- `microsoft/` — Microsoft authentication profile cache, when used
 
-Set DATA_DIR to another persistent directory when needed. Back up this folder before reinstalling or deleting the Pterodactyl server. Do not commit it to GitHub.
+Set `DATA_DIR` to another persistent directory when needed. Back up this folder before reinstalling or deleting the Pterodactyl server. Do not commit it to GitHub.
 
 ## Environment variables
 
@@ -63,7 +76,7 @@ Set DATA_DIR to another persistent directory when needed. Back up this folder be
 | SERVER_PORT | Pterodactyl allocation | Pterodactyl's allocated port |
 | PORT | SERVER_PORT or 3000 | HTTP listening port |
 | HOST | 0.0.0.0 | Bind address |
-| DATA_DIR | ./data | Persistent local data folder |
+| DATA_DIR | ./data | Persistent data folder |
 | MAX_BOTS | 10 | Maximum simultaneous Mineflayer sessions |
 | COOKIE_SECURE | false | Set true when the public panel uses HTTPS |
 
@@ -71,5 +84,5 @@ Set DATA_DIR to another persistent directory when needed. Back up this folder be
 
 - Bots run in the same Node.js process as the panel. Keep the Pterodactyl server online to keep them connected.
 - Bots configured as running are resumed after the panel process restarts.
-- Microsoft sign-in tokens are stored in data/microsoft/.
+- Microsoft sign-in tokens are stored in `data/microsoft/`.
 - The panel does not control or start another Pterodactyl server. It uses the resources assigned to this one.

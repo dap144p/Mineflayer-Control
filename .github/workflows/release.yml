@@ -18,14 +18,18 @@ jobs:
       - run: npm install
       - run: npm run build
       - name: Create flat release ZIP
-        run: git archive --format=zip --output=MineFlayer-Control-Web-v0.0.0.0.zip HEAD
+        run: |
+          VERSION="$(cat VERSION)"
+          ASSET="MineFlayer-Control-Web-v${VERSION}.zip"
+          git archive --format=zip --output="$ASSET" HEAD
+          echo "ASSET=$ASSET" >> "$GITHUB_ENV"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="v0.0.0.0"
-          RELEASE_NAME="MineFlayer-Control-Web-v0.0.0.0"
-          ASSET="MineFlayer-Control-Web-v0.0.0.0.zip"
+          TAG="v${VERSION}"
+          RELEASE_NAME="MineFlayer-Control-Web-v${VERSION}"
 
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Release $TAG already exists; skipping."
@@ -34,5 +38,5 @@ jobs:
 
           gh release create "$TAG" "$ASSET" \
             --title "$RELEASE_NAME" \
-            --notes "MineFlayer Control Web self-hosted release. Extract the ZIP contents directly into the server directory. Start with: node index.js" \
+            --notes "Mineflayer Control Web self-hosted release. Extract the ZIP contents directly into the server directory. Start with: node index.js" \
             --target "$GITHUB_SHA"
