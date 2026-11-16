@@ -35,6 +35,9 @@ export default defineConfig({
       },
     },
   ],
+  define: {
+    __dirname: JSON.stringify("/viewer/"),
+  },
   build: {
     outDir: join(root, "public", "viewer"),
     emptyOutDir: false,
