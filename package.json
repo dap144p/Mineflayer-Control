@@ -7,8 +7,8 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "vite dev",
-    "build": "vite build",
+    "dev": "node scripts/prepare-viewer.js && vite build --config vite.viewer.config.js && vite dev",
+    "build": "node scripts/prepare-viewer.js && vite build --config vite.viewer.config.js && vite build",
     "start": "node index.js",
     "lint": "eslint . --quiet"
   },
@@ -68,6 +68,7 @@
     "react-markdown": "^9.0.1",
     "react-quill-new": "^3.8.3",
     "react-resizable-panels": "^2.1.7",
+    "prismarine-viewer": "^1.33.0",
     "recharts": "^2.15.4",
     "sonner": "^2.0.1",
     "tailwind-merge": "^3.0.2",
