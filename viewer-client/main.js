@@ -2,7 +2,7 @@ import * as THREE from "@viewer-three";
 import { OrbitControls } from "@viewer-three/examples/jsm/controls/OrbitControls.js";
 import prismarineViewer from "prismarine-viewer/viewer";
 
-const { Viewer } = prismarineViewer;
+const { Viewer, Entity } = prismarineViewer;
 const root = document.querySelector("#viewer");
 const status = document.querySelector("#status");
 const cameraButton = document.querySelector("#camera");
@@ -34,6 +34,7 @@ const listeners = new Map();
 let cameraMode = "orbit";
 let lastPosition = null;
 let worldVersion = "";
+let botMesh = null;
 
 const emitter = {
   on(event, callback) {
@@ -74,6 +75,15 @@ cameraButton.addEventListener("click", () => {
 function updatePosition(data) {
   if (!data?.pos) return;
   const pos = data.pos;
+
+  if (data.addMesh) {
+    if (!botMesh) {
+      botMesh = new Entity("1.16.4", "player", viewer.scene).mesh;
+      viewer.scene.add(botMesh);
+    }
+    botMesh.position.set(pos.x, pos.y, pos.z);
+    botMesh.rotation.y = data.yaw || 0;
+  }
 
   if (cameraMode === "first") {
     viewer.setFirstPersonCamera(pos, data.yaw || 0, data.pitch || 0);
