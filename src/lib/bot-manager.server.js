@@ -1,6 +1,6 @@
 import mineflayer from "mineflayer";
-import os from "node:os";
 import path from "node:path";
+import { runScheduler, refreshRunnerPanels, activatePanelAssignments } from "@/lib/runner.server";
 import {
   createRow,
   deleteRows,
@@ -43,19 +43,19 @@ async function setStatus(id, status, message) {
   });
 }
 
-export async function startBot(id, ownerId) {
+async function startLocalBot(id, ownerId) {
   const config = await getRow("Bot", id);
   if (!config || config.created_by_id !== ownerId) throw new Error("Bot tidak ditemukan.");
+  if (config.runner_id !== "local" || config.desired_state !== "running") {
+    throw new Error("Bot belum ditugaskan ke Local Runner.");
+  }
   if (bots.has(id)) return { ok: true, status: "running" };
-
-  if (bots.size >= MAX_BOTS) throw new Error("Batas bot aktif tercapai (" + MAX_BOTS + ").");
+  if (bots.size >= MAX_BOTS) throw new Error("Batas bot lokal tercapai (" + MAX_BOTS + ").");
 
   await updateRow("Bot", id, {
-    desired_state: "running",
     status: "connecting",
     status_message: "Menghubungkan ke server Minecraft...",
-    runner_id: "local",
-    runner_name: "Pterodactyl lokal",
+    runner_name: "Local Runner",
   });
 
   const options = {
@@ -111,16 +111,71 @@ export async function startBot(id, ownerId) {
   }
 }
 
+export async function activateLocalAssignments(ownerId) {
+  for (const [id, session] of bots) {
+    const config = await getRow("Bot", id);
+    if (config?.created_by_id !== ownerId) continue;
+    if (config.desired_state === "running" && config.runner_id === "local") continue;
+    session.stopping = true;
+    clearTimeout(session.moveTimer);
+    try { session.bot.quit("Runner assignment changed"); } catch {}
+    bots.delete(id);
+  }
+
+  const assigned = await listRows("Bot", {
+    created_by_id: ownerId,
+    runner_id: "local",
+    desired_state: "running",
+  }, { limit: 500 });
+
+  for (const bot of assigned) {
+    try {
+      await startLocalBot(bot.id, ownerId);
+    } catch (error) {
+      await setStatus(bot.id, "error", error.message);
+      await log(bot.id, "error", error.message);
+    }
+  }
+}
+
+export async function startBot(id, ownerId) {
+  const config = await getRow("Bot", id);
+  if (!config || config.created_by_id !== ownerId) throw new Error("Bot tidak ditemukan.");
+
+  await updateRow("Bot", id, {
+    desired_state: "running",
+    status: config.runner_id ? config.status : "queued",
+    status_message: config.runner_id ? config.status_message : "Mencari runner yang tersedia...",
+    queued_at: config.runner_id ? (config.queued_at || "") : new Date().toISOString(),
+  });
+
+  await refreshRunnerPanels(ownerId);
+  await runScheduler(ownerId);
+  await activateLocalAssignments(ownerId);
+  await activatePanelAssignments(ownerId);
+
+  const updated = await getRow("Bot", id);
+  return {
+    ok: true,
+    status: updated?.status || "queued",
+    runnerName: updated?.runner_name || "",
+    queued: !updated?.runner_id,
+  };
+}
+
 export async function stopBot(id, ownerId) {
   const config = await getRow("Bot", id);
   if (!config || config.created_by_id !== ownerId) throw new Error("Bot tidak ditemukan.");
+
   await updateRow("Bot", id, {
     desired_state: "stopped",
     status: "offline",
     status_message: "Dihentikan.",
     runner_id: null,
     runner_name: "",
+    queued_at: "",
   });
+
   const session = bots.get(id);
   if (session) {
     session.stopping = true;
@@ -128,7 +183,11 @@ export async function stopBot(id, ownerId) {
     try { session.bot.quit("Stopped from Mineflayer Control"); } catch {}
     bots.delete(id);
   }
+
   await log(id, "system", "Bot dihentikan.");
+  await runScheduler(ownerId);
+  await activateLocalAssignments(ownerId);
+  await activatePanelAssignments(ownerId);
   return { ok: true, status: "offline" };
 }
 
@@ -171,29 +230,20 @@ export async function deleteBot(id, ownerId) {
   await deleteRows("Bot", { id, created_by_id: ownerId });
 }
 
-export async function getLocalRunner() {
-  const activeBots = bots.size;
-  return {
-    id: "local",
-    label: "Panel Pterodactyl",
-    kind: "local",
-    host: os.hostname(),
-    version: process.version,
-    last_seen: new Date().toISOString(),
-    power_state: "running",
-    max_bots: MAX_BOTS,
-    memory_used_mb: Math.round(process.memoryUsage().rss / 1048576),
-    active_bots: activeBots,
-  };
-}
-
 export async function resumeSavedBots() {
   if (resumePromise) return resumePromise;
   resumePromise = (async () => {
-    const saved = await listRows("Bot", { desired_state: "running" }, { limit: MAX_BOTS });
-    for (const bot of saved) {
-      try { await startBot(bot.id, bot.created_by_id); }
-      catch (error) { await log(bot.id, "error", "Gagal memulihkan bot: " + error.message); }
+    const saved = await listRows("Bot", { desired_state: "running" }, { limit: 500 });
+    const owners = [...new Set(saved.map((bot) => bot.created_by_id).filter(Boolean))];
+    for (const ownerId of owners) {
+      try {
+        await refreshRunnerPanels(ownerId);
+        await runScheduler(ownerId);
+        await activateLocalAssignments(ownerId);
+        await activatePanelAssignments(ownerId);
+      } catch (error) {
+        console.error("[Mineflayer Control] resume runner:", error.message);
+      }
     }
   })();
   return resumePromise;

@@ -7,6 +7,7 @@ const FILES = {
   Bot: "bots.json",
   BotCommand: "commands.json",
   BotLog: "logs.json",
+  Runner: "runners.json",
   User: "users.json",
   Session: "sessions.json",
 };

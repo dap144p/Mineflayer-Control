@@ -28,6 +28,18 @@ Run npm run build again after pulling source-code updates. Normal restarts only 
 
 The startup wrapper maps Pterodactyl's SERVER_PORT to PORT and binds the server to 0.0.0.0.
 
+## Runner modes
+
+Mineflayer Control supports three runner modes:
+
+- **Local Runner** — bot processes run in this website's Node.js process. The maximum is controlled by `MAX_BOTS`.
+- **VPS Runner** — add a VPS runner, download its generated `runner.mjs`, install `mineflayer`, and keep `node runner.mjs` running on the VPS.
+- **Pterodactyl Runner** — add the panel URL and a **Client API Key** (Account → API Credentials), select the target server, then install the generated `runner.mjs` on that server and set its startup command to `node runner.mjs`. Mineflayer Control uses the Client API Key to list the account's servers, check resource state, and send power signals; the runner script itself executes the bots.
+
+VPS and Pterodactyl runner processes connect back to `/api/runner/sync` using their generated runner token. Keep that token private. Panel API keys are stored in the local `data/runners.json` file and are not returned to the browser. The `data/` directory is excluded from Git.
+
+Bots are assigned to available external runners first, then to Local Runner. If all available runner slots are full, bots remain queued until a slot becomes available. Each external runner's `maks bot` setting controls its assigned bot capacity.
+
 ## First login
 
 Open the website. On the first visit, select **Buat akun owner pertama** and create the owner account. Registration closes automatically after the first account is created.
