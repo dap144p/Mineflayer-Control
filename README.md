@@ -13,21 +13,17 @@ Mineflayer Control is a self-hosted Mineflayer web panel. The web app, Mineflaye
 1. Create a Node.js server in your Pterodactyl panel and allocate a port.
 2. Download this repository into the server files (or use the panel's Git deployment feature).
 3. Select Node.js 22 or newer in the server's startup environment.
-4. Set the Pterodactyl startup command temporarily to:
+4. Set the Pterodactyl startup command to:
 
-   npm install && npm run build && npm start
+   node index.js
 
-5. Save the setting and start the server. This installs dependencies, builds the app, and then starts the website in the same startup process. Keep the server running until it finishes building and shows that it is online.
+5. Save the setting and start the server. The entrypoint automatically installs or updates dependencies when needed, builds the web panel when source files change, then starts the website. The first startup may take longer while dependencies are installed and the initial build runs.
 
-6. After the first successful build, change the startup command back to:
+6. Open the allocated port through your panel's domain/proxy.
 
-   npm start
+Keep the startup command as node index.js for every restart. After pulling source-code updates, start the server again; the entrypoint checks the source and rebuilds when needed.
 
-7. Open the allocated port through your panel's domain/proxy.
-
-After pulling source-code updates, use the temporary command again to install any changed dependencies and rebuild. For normal restarts, use only npm start.
-
-The startup wrapper maps Pterodactyl's SERVER_PORT to PORT and binds the server to 0.0.0.0.
+The entrypoint maps Pterodactyl's SERVER_PORT to PORT and binds the server to 0.0.0.0.
 
 ## Runner modes
 
