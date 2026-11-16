@@ -31,9 +31,10 @@ Never commit data/ or environment secrets.
 - vite.config.js: TanStack Start + Nitro Node server build.
 
 ## Deployment
-- Build: npm install && npm run build
-- Start: npm start
-- Pterodactyl port: SERVER_PORT is mapped to PORT by scripts/start.js.
+## Deployment
+- Pterodactyl startup command: node index.js.
+- index.js installs/updates dependencies when needed, rebuilds when source files change, then starts the Nitro server.
+- Pterodactyl port: SERVER_PORT is mapped to PORT by index.js.
 - Bind address: 0.0.0.0.
 - Persistent volume must retain DATA_DIR between restarts.
 
