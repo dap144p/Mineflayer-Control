@@ -19,17 +19,31 @@ import {
   setupRequired,
 } from "@/lib/auth.server";
 import {
+  activateLocalAssignments,
   deleteBot,
   executeBotCommand,
-  getLocalRunner,
   startBot,
   stopBot,
 } from "@/lib/bot-manager.server";
+import {
+  activatePanelAssignments,
+  createRunner,
+  deleteRunner,
+  getLocalRunner,
+  getRunner,
+  getRunnerList,
+  powerRunner,
+  refreshRunnerPanels,
+  runScheduler,
+  updateRunner,
+  verifyRunnerPanel,
+} from "@/lib/runner.server";
 
 const ENTITY_BUCKETS = {
   Bot: "Bot",
   BotCommand: "BotCommand",
   BotLog: "BotLog",
+  Runner: "Runner",
 };
 
 const authRateLimits = new Map();
@@ -111,7 +125,25 @@ async function handle(request, params) {
   if (!user) return json({ error: "Unauthorized" }, 401);
 
   if (area === "runtime" && method === "GET") {
-    return json(await getLocalRunner());
+    return json(await getLocalRunner(user.id));
+  }
+
+  if (area === "runners" && first === "verify" && method === "POST") {
+    const input = await bodyOf(request);
+    return json(await verifyRunnerPanel(input.panelUrl, input.apiKey));
+  }
+
+  if (area === "runners" && first === "power" && method === "POST") {
+    const input = await bodyOf(request);
+    return json(await powerRunner(user.id, input.runnerId, input.signal));
+  }
+
+  if (area === "runners" && first === "refresh" && method === "POST") {
+    await refreshRunnerPanels(user.id);
+    await runScheduler(user.id);
+    await activateLocalAssignments(user.id);
+    await activatePanelAssignments(user.id);
+    return json({ ok: true });
   }
 
   if (area === "bots" && first && second && method === "POST") {
@@ -119,7 +151,31 @@ async function handle(request, params) {
     if (second === "stop") return json(await stopBot(first, user.id));
     if (second === "command") {
       const input = await bodyOf(request);
-      return json(await executeBotCommand(first, user.id, input.type, input.payload));
+      const bot = await getRow("Bot", first);
+      if (!bot || bot.created_by_id !== user.id) return json({ error: "Bot tidak ditemukan." }, 404);
+      const allowedTypes = ["chat", "command", "move", "jump", "look", "stop"];
+      if (!allowedTypes.includes(String(input.type || ""))) return json({ error: "Jenis perintah tidak valid." }, 400);
+      const command = await createRow("BotCommand", {
+        bot_id: bot.id,
+        bot_name: bot.name,
+        type: input.type,
+        payload: String(input.payload || "").slice(0, 256),
+        status: "pending",
+        created_by_id: user.id,
+      });
+      if (bot.runner_id === "local") {
+        try {
+          await executeBotCommand(first, user.id, input.type, input.payload);
+          await updateRow("BotCommand", command.id, { status: "done", result: "ok" });
+        } catch (error) {
+          await updateRow("BotCommand", command.id, { status: "error", result: error.message });
+          throw error;
+        }
+      } else if (!bot.runner_id) {
+        await updateRow("BotCommand", command.id, { status: "error", result: "Bot belum mendapat runner." });
+        return json({ error: "Bot belum mendapat runner." }, 409);
+      }
+      return json(await getRow("BotCommand", command.id), 201);
     }
   }
 
@@ -127,11 +183,31 @@ async function handle(request, params) {
 
   const entity = first;
   if (entity === "Runner") {
-    if (method === "GET" && (!second || second === "filter")) {
-      return json([await getLocalRunner()]);
+    if (method === "GET" && !second) return json(await getRunnerList(user.id));
+    if (method === "POST" && second === "filter") {
+      const input = await bodyOf(request);
+      const criteria = input.criteria || {};
+      const rows = await getRunnerList(user.id);
+      return json(rows.filter((row) => Object.entries(criteria).every(([key, value]) => row[key] === value)));
     }
-    if (method === "GET" && second === "local") return json(await getLocalRunner());
-    return json({ error: "Runner eksternal tidak digunakan di mode lokal." }, 405);
+    if (method === "POST" && !second) {
+      return json(await createRunner(user.id, await bodyOf(request)), 201);
+    }
+    if (second && method === "GET" && !third) {
+      const row = await getRunner(user.id, second);
+      return row ? json(row) : json({ error: "Runner tidak ditemukan." }, 404);
+    }
+    if (second && (method === "PATCH" || method === "PUT") && !third) {
+      return json(await updateRunner(user.id, second, await bodyOf(request)));
+    }
+    if (second && method === "DELETE" && !third) {
+      await deleteRunner(user.id, second);
+      await runScheduler(user.id);
+      await activateLocalAssignments(user.id);
+      await activatePanelAssignments(user.id);
+      return json({ ok: true });
+    }
+    return json({ error: "Operasi Runner tidak didukung." }, 405);
   }
 
   const bucket = ENTITY_BUCKETS[entity];
@@ -202,15 +278,29 @@ async function handle(request, params) {
       const inputType = String(input.type || "");
       const allowedTypes = ["chat", "command", "move", "jump", "look", "stop"];
       if (!allowedTypes.includes(inputType)) return json({ error: "Jenis perintah tidak valid." }, 400);
-      const command = await createRow(bucket, { ...input, created_by_id: user.id, status: "pending" });
-      try {
-        await executeBotCommand(input.bot_id, user.id, inputType, input.payload || "");
-        await updateRow(bucket, command.id, { status: "done", result: "ok" });
-      } catch (error) {
-        await updateRow(bucket, command.id, { status: "error", result: error.message });
-        throw error;
+      const bot = await getRow("Bot", String(input.bot_id || ""));
+      if (!bot || bot.created_by_id !== user.id) return json({ error: "Bot tidak ditemukan." }, 404);
+      const command = await createRow(bucket, {
+        bot_id: bot.id,
+        bot_name: bot.name,
+        type: inputType,
+        payload: String(input.payload || "").slice(0, 256),
+        created_by_id: user.id,
+        status: "pending",
+      });
+      if (bot.runner_id === "local") {
+        try {
+          await executeBotCommand(bot.id, user.id, inputType, input.payload || "");
+          await updateRow(bucket, command.id, { status: "done", result: "ok" });
+        } catch (error) {
+          await updateRow(bucket, command.id, { status: "error", result: error.message });
+          throw error;
+        }
+      } else if (!bot.runner_id) {
+        await updateRow(bucket, command.id, { status: "error", result: "Bot belum mendapat runner." });
+        return json({ error: "Bot belum mendapat runner." }, 409);
       }
-      return json(command, 201);
+      return json(await getRow(bucket, command.id), 201);
     }
     return json(await createRow(bucket, { ...input, created_by_id: user.id }), 201);
   }

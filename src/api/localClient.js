@@ -80,6 +80,11 @@ export const localClient = {
   runtime: {
     get: () => api("runtime"),
   },
+  runners: {
+    verifyPanel: (data) => api("runners/verify", { method: "POST", ...jsonBody(data) }),
+    power: (data) => api("runners/power", { method: "POST", ...jsonBody(data) }),
+    refresh: () => api("runners/refresh", { method: "POST", ...jsonBody({}) }),
+  },
   auth: {
     me: async () => (await api("auth/me")).user,
     setup: () => api("auth/setup"),
