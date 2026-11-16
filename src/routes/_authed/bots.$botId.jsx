@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Loader2, Pencil, Power, Trash2 } from "lucide-react";
+import { ArrowLeft, Eye, Loader2, Pencil, Power, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { localClient } from "@/api/localClient";
 import { startBot, stopBot } from "@/lib/bot-fns";
 import StatusPill from "@/components/StatusPill";
 import BotConsole from "@/components/bot/BotConsole";
 import BotControls from "@/components/bot/BotControls";
+import BotViewer from "@/components/bot/BotViewer";
 import BotFormDialog from "@/components/dashboard/BotFormDialog";
 import useRunnerStatus from "@/hooks/useRunnerStatus";
 
@@ -21,6 +22,7 @@ function BotPanelPage() {
   const queryClient = useQueryClient();
   const { online: runnerOnline } = useRunnerStatus();
   const [formOpen, setFormOpen] = useState(false);
+  const [viewerOpen, setViewerOpen] = useState(false);
   const [logs, setLogs] = useState([]);
 
   const { data: bot, isLoading, isError } = useQuery({
@@ -114,6 +116,7 @@ function BotPanelPage() {
   }
 
   const isRunning = bot.desired_state === "running";
+  const canView = bot.status === "online" && bot.runner_id === "local";
 
   return (
     <div className="mx-auto w-full max-w-6xl px-5 pb-16 pt-8 sm:px-8 sm:pt-10">
@@ -149,6 +152,16 @@ function BotPanelPage() {
             <Power className="h-4 w-4" strokeWidth={2.2} />
             {isRunning ? "Hentikan" : "Jalankan"}
           </button>
+          <button
+            type="button"
+            onClick={() => setViewerOpen((open) => !open)}
+            disabled={!canView}
+            title={canView ? "Lihat dunia 3D" : "Viewer membutuhkan bot online di Local Runner"}
+            className="flex h-10 items-center gap-2 rounded-xl border border-white/[0.09] bg-white/[0.03] px-3 text-[12px] text-white/60 transition-colors hover:bg-white/[0.07] hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+          >
+            <Eye className="h-4 w-4" strokeWidth={1.8} />
+            {viewerOpen ? "Tutup Viewer" : "Lihat Dunia"}
+          </button>
           <button type="button" onClick={() => setFormOpen(true)} title="Pengaturan" className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.09] bg-white/[0.03] text-white/50 transition-colors hover:bg-white/[0.07] hover:text-white">
             <Pencil className="h-4 w-4" strokeWidth={1.8} />
           </button>
@@ -157,6 +170,10 @@ function BotPanelPage() {
           </button>
         </div>
       </div>
+
+      {viewerOpen && canView && (
+        <BotViewer botId={bot.id} onClose={() => setViewerOpen(false)} />
+      )}
 
       <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="order-2 h-[460px] lg:order-1">
